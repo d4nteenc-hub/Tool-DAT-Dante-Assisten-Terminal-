@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dat-terminal"
+version = "1.0.1"
+description = "DAT - Dante Assistant Terminal: an AI that operates your terminal for you."
+readme = "README.md"
+requires-python = ">=3.8"
+license = { text = "MIT" }
+keywords = ["terminal", "ai", "assistant", "termux", "cli", "llm"]
+classifiers = [
+    "Environment :: Console :: Curses",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Operating System :: POSIX",
+    "Topic :: System :: Shells",
+]
+dependencies = []
+
+[project.scripts]
+dat = "dat.cli:main"
+
+[tool.setuptools]
+packages = ["dat"]
