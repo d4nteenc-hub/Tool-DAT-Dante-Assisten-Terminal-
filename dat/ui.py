@@ -44,6 +44,9 @@ class TUI:
         self.L: Optional[dict] = None
         self.cursor_pos = None
         self.cursor_state = None
+        self.fake_cursor = False
+        self.input_row = -1
+        self.input_tw = 0
 
     def say(self, kind: str, text: str) -> None:
         first, cont, pstyle, tstyle = kinds().get(kind, kinds()["plain"])
@@ -110,6 +113,7 @@ class TUI:
         scr.keypad(True)
         scr.timeout(90)
         self._init_colors()
+        self._init_input()
         threading.Thread(target=target, daemon=True).start()
         while not self.done.is_set():
             try:
@@ -122,6 +126,21 @@ class TUI:
                 self._tick()
             except KeyboardInterrupt:
                 self._cancel(hint=True)
+
+    def _init_input(self) -> None:
+        # Draw our own cursor: the terminal's cursor flashes as a white block whenever the
+        # animation row is repainted, so keep the real one hidden.
+        try:
+            curses.curs_set(0)
+            self.fake_cursor = True
+        except curses.error:
+            self.fake_cursor = False
+        if not os.environ.get("DAT_NO_MOUSE"):
+            try:
+                curses.mouseinterval(0)
+                curses.mousemask(curses.ALL_MOUSE_EVENTS)
+            except (curses.error, AttributeError):
+                pass
 
     def _init_colors(self) -> None:
         wide = False
@@ -140,12 +159,15 @@ class TUI:
         else:
             for name, (_, _, bold, dim) in PALETTE.items():
                 self.attrs[name] = (curses.A_BOLD if bold else 0) | (curses.A_DIM if dim else 0)
+        self.attrs["cursor"] = self.attrs.get("cursor", 0) | curses.A_REVERSE
 
     def _key(self, ch) -> None:
         if isinstance(ch, int):
             k = ch
             if k == curses.KEY_RESIZE:
                 self.scr.clear()
+            elif k == curses.KEY_MOUSE:
+                self._mouse()
             elif k == curses.KEY_UP:
                 self.scroll += 2
             elif k == curses.KEY_DOWN:
@@ -210,6 +232,60 @@ class TUI:
             self.buf.insert(self.cur, ch)
             self.cur += 1
         self.dirty = True
+
+    def _mouse(self) -> None:
+        try:
+            _id, mx, my, _z, bstate = curses.getmouse()
+        except curses.error:
+            return
+        if bstate & getattr(curses, "BUTTON4_PRESSED", 0):
+            self.scroll += 3
+        elif bstate & getattr(curses, "BUTTON5_PRESSED", 0):
+            self.scroll = max(0, self.scroll - 3)
+        elif bstate & (curses.BUTTON1_PRESSED | curses.BUTTON1_CLICKED | curses.BUTTON1_DOUBLE_CLICKED):
+            self._click(mx, my)
+
+    def _click(self, mx: int, my: int) -> None:
+        """Tap in the input box: put the cursor right after the tapped character, so Backspace
+        removes it. Tapping the edge arrows scrolls the text sideways."""
+        if self.awaiting is None or self.input_row < 0 or abs(my - self.input_row) > 1:
+            return
+        tw, n = self.input_tw, len(self.buf)
+        disp = [G["mask"]] * n if self.secret else self.buf
+        step = max(1, tw // 2)
+        if mx < 4:
+            self.cur = max(0, self.off - step) if self.off > 0 else 0
+        elif mx >= 4 + tw:
+            if width(disp[self.off:]) > tw:
+                seen, end = 0, self.off
+                while end < n and seen + cw(disp[end]) <= tw:
+                    seen += cw(disp[end])
+                    end += 1
+                self.cur = min(n, end + step)
+            else:
+                self.cur = n
+        else:
+            col, acc, idx = mx - 4, 0, n
+            for j in range(self.off, n):
+                w = cw(disp[j])
+                if col < acc + w:
+                    idx = j + 1
+                    break
+                acc += w
+            self.cur = idx
+        self.dirty = True
+
+    def _fit_input(self, disp: List[str], tw: int) -> None:
+        cur = min(self.cur, len(disp))
+        self.off = max(0, min(self.off, cur))
+        while width(disp[self.off:cur]) > tw - 1:
+            self.off += 1
+        while self.off > 0 and width(disp[self.off - 1:]) <= tw - 1:
+            self.off -= 1
+
+    @staticmethod
+    def _center(text: str, cols: int) -> int:
+        return max(0, (cols - width(text)) // 2)
 
     def _backspace(self) -> None:
         if self.cur > 0:
@@ -354,13 +430,16 @@ class TUI:
         bh = L["bh"]
         sub = "v%s" % __version__ + ((" %s %s" % (G["sep"], self.model_line)) if self.model_line else "")
         if L["kind"] == "full":
+            ax = self._center(max(ART, key=width), cols)
             for i, art in enumerate(ART):
-                self._put(i, 0, art, "b1" if i < 5 else "b2" if i < 8 else "b3")
-            self._put(len(ART) + 1, 0, "Dante Assistant Terminal", "say")
-            self._put(len(ART) + 2, 0, sub, "dim")
+                self._put(i, ax, art, "b1" if i < 5 else "b2" if i < 8 else "b3")
+            title = "Dante Assistant Terminal"
+            self._put(len(ART) + 1, self._center(title, cols), title, "say")
+            self._put(len(ART) + 2, self._center(sub, cols), sub, "dim")
             L["line_y"] = len(ART)
         elif L["kind"] == "compact":
-            self._put(1, 1, "Dante Assistant Terminal  " + sub, "say", limit=cols - 1)
+            text = "Dante Assistant Terminal  " + sub
+            self._put(1, self._center(text, cols), text, "say", limit=cols - 1)
             L["line_y"] = 0
         else:
             L["line_y"] = 0
@@ -380,6 +459,9 @@ class TUI:
         self._finish()
 
     def _finish(self) -> None:
+        if self.fake_cursor:
+            self.scr.refresh()
+            return
         vis = 1 if self.awaiting is not None and self.cursor_pos else 0
         if vis != self.cursor_state:
             try:
@@ -406,10 +488,10 @@ class TUI:
             return "head" if head >= 0 and d == 0 else "ln3" if head >= 0 and d == 1 else \
                 "ln2" if head >= 0 and d == 2 else "ln1" if head >= 0 and d == 3 else "ln0"
 
-        x = 1
+        x = self._center(G["bar"] * (2 * n) + "   ", cols)
         for i in range(n):
             x = self._put(y, x, G["bar"], style(i))
-        x = self._put(y, x, " %s " % G["cross"], "flash" if flash else "cross")
+        x = self._put(y, x, " %s " % G["gem"], "flash" if flash else "gem")
         for i in range(n - 1, -1, -1):
             x = self._put(y, x, G["bar"], style(i))
 
@@ -450,7 +532,7 @@ class TUI:
         end = total - self.scroll
         start = max(0, end - vis)
         chunk = rows[start:end]
-        top = y0 + 1 + vis - len(chunk)
+        top = y0 + 1
         for i, segs in enumerate(chunk):
             x = 2
             for text, style in segs:
@@ -474,16 +556,26 @@ class TUI:
         self._box(y0, 0, 3, cols, "borderon" if active else "border")
         self._put(y0, 2, " %s " % (self.awaiting if active else "busy %s Esc cancels" % G["sep"]),
                   "label" if active else "dim")
-        self._put(y0 + 1, 2, G["prompt"], "prompt")
+        row = y0 + 1
+        self._put(row, 2, G["prompt"], "prompt")
         tw = cols - 7
         disp = [G["mask"]] * len(self.buf) if self.secret else self.buf
-        self.off = min(self.off, self.cur)
-        while width(disp[self.off:self.cur]) > tw - 1:
-            self.off += 1
-        if not self.buf and self.awaiting == "input":
-            self._put(y0 + 1, 4, "ask anything, or !cmd for shell", "dim", limit=4 + tw)
-        self._put(y0 + 1, 4, "".join(disp[self.off:]), "plain", limit=4 + tw)
-        self.cursor_pos = (y0 + 1, 4 + width(disp[self.off:self.cur]))
+        self._fit_input(disp, tw)
+        self.input_row, self.input_tw = row, tw
+        hint = "ask anything, or !cmd for shell"
+        placeholder = not self.buf and self.awaiting == "input"
+        if placeholder:
+            self._put(row, 4, hint, "dim", limit=4 + tw)
+        self._put(row, 4, "".join(disp[self.off:]), "plain", limit=4 + tw)
+        if self.off > 0:
+            self._put(row, 3, G["left"], "label")
+        if width(disp[self.off:]) > tw:
+            self._put(row, 4 + tw, G["right"], "label")
+        cx = 4 + width(disp[self.off:self.cur])
+        self.cursor_pos = (row, cx)
+        if active and self.fake_cursor:
+            under = hint[0] if placeholder else (disp[self.cur] if self.cur < len(disp) else " ")
+            self._put(row, cx, under, "cursor", limit=cols - 1)
 
     def _draw_help(self, y: int, h: int, cols: int) -> None:
         if h <= 1:

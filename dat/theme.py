@@ -21,11 +21,11 @@ def _codeset() -> str:
 UTF = "utf" in _codeset().lower()
 
 G: Dict[str, str] = (
-    dict(dot="●", prompt="❯", arrow="▸", cross="†", bar="─", up="▲", down="▼", block="█", track="│",
-         mask="•", dots="…", sep="·", spin="⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏")
+    dict(dot="●", prompt="❯", arrow="▸", gem="◆", bar="─", up="▲", down="▼", block="█", track="│",
+         mask="•", dots="…", sep="·", spin="⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏", left="‹", right="›")
     if UTF else
-    dict(dot="*", prompt=">", arrow=">", cross="+", bar="-", up="^", down="v", block="#", track="|",
-         mask="*", dots="...", sep="-", spin="|/-\\")
+    dict(dot="*", prompt=">", arrow=">", gem="*", bar="-", up="^", down="v", block="#", track="|",
+         mask="*", dots="...", sep="-", spin="|/-\\", left="<", right=">")
 )
 
 ART_UTF = [
@@ -55,14 +55,16 @@ HELP = [("/fast", "quick replies"), ("/think", "plan first"), ("/model", "switch
 COMMANDS = ["/fast", "/think", "/model", "/key", "/clear", "/help", "/exit"]
 
 R, Y, W = curses.COLOR_RED, curses.COLOR_YELLOW, curses.COLOR_WHITE
+B, C = curses.COLOR_BLUE, curses.COLOR_CYAN
+# name -> (256-colour, 8-colour fallback, bold, dim). Blue theme; red is kept only for errors.
 PALETTE = {
-    "plain": (255, W, 0, 0), "prompt": (203, R, 1, 0), "say": (210, R, 0, 0), "cmd": (217, W, 0, 0),
+    "plain": (255, W, 0, 0), "prompt": (75, C, 1, 0), "say": (117, C, 0, 0), "cmd": (153, W, 0, 0),
     "out": (244, W, 0, 1), "dim": (245, W, 0, 1), "warn": (221, Y, 0, 0), "err": (196, R, 1, 0),
-    "b1": (160, R, 1, 0), "b2": (124, R, 0, 0), "b3": (88, R, 0, 1),
-    "border": (88, R, 0, 0), "borderon": (160, R, 1, 0), "label": (203, R, 0, 0), "hc": (203, R, 0, 0),
-    "ln0": (52, R, 0, 1), "ln1": (88, R, 0, 0), "ln2": (124, R, 0, 0), "ln3": (160, R, 0, 0),
-    "head": (196, R, 1, 0), "cross": (196, R, 1, 0), "flash": (224, W, 1, 0), "mode": (196, R, 1, 0),
-    "thumb": (160, R, 0, 0), "track": (52, R, 0, 1),
+    "b1": (45, C, 1, 0), "b2": (39, C, 0, 0), "b3": (33, B, 1, 0),
+    "border": (25, B, 1, 0), "borderon": (39, C, 1, 0), "label": (75, C, 0, 0), "hc": (75, C, 0, 0),
+    "ln0": (17, B, 0, 1), "ln1": (25, B, 1, 0), "ln2": (32, C, 0, 0), "ln3": (39, C, 0, 0),
+    "head": (51, C, 1, 0), "gem": (45, C, 1, 0), "flash": (159, C, 1, 0), "mode": (45, C, 1, 0),
+    "thumb": (33, B, 1, 0), "track": (17, B, 0, 1), "cursor": (117, C, 1, 0),
 }
 
 Seg = Tuple[str, str]
