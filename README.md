@@ -31,11 +31,81 @@ DAT > 5.8G free of 110G.
 
 - Python 3.8 or newer, with the `curses` module
 - An API key from one of the supported providers
-- An interactive terminal (macOS, Linux, Termux, or WSL on Windows)
+- An interactive terminal: Termux (Android), Linux, macOS, or WSL on Windows
 
 Free keys are available from [Groq](https://console.groq.com/keys) and [Google AI Studio](https://aistudio.google.com/apikey).
 
 ## Installation
+
+DAT installs the same way everywhere: prepare your terminal (Step 1), clone the repo and run the installer (Step 2), then start it (Step 3). Only Step 1 differs per platform.
+
+### Step 1 — Prepare your terminal
+
+Pick your platform. You need `git` and Python 3.8+.
+
+#### Termux (Android)
+
+Install Termux from [F-Droid](https://f-droid.org/packages/com.termux/) (the Play Store build is outdated). Then:
+
+```sh
+pkg update && pkg upgrade -y
+pkg install -y git python
+```
+
+Optional, to let DAT reach your phone's files (`~/storage`, `/sdcard`):
+
+```sh
+termux-setup-storage
+```
+
+#### Debian / Ubuntu / Kali / Linux Mint
+
+```sh
+sudo apt update
+sudo apt install -y git python3
+```
+
+#### Fedora
+
+```sh
+sudo dnf install -y git python3
+```
+
+#### Arch / Manjaro
+
+```sh
+sudo pacman -S --needed git python
+```
+
+#### macOS
+
+```sh
+xcode-select --install     # provides git and python3
+```
+
+Or with Homebrew: `brew install git python`.
+
+#### Windows (WSL)
+
+Native Windows has no `curses`, so use WSL. In PowerShell (as Administrator):
+
+```powershell
+wsl --install
+```
+
+Restart, open the Ubuntu app, then follow the **Debian / Ubuntu** steps above inside it.
+
+#### Check it worked
+
+```sh
+git --version
+python3 --version                  # must be 3.8 or newer
+python3 -c "import curses" && echo "curses OK"
+```
+
+If the last command prints an error instead of `curses OK`, install the full Python package for your system (on Windows without WSL, `pip install windows-curses` may also work).
+
+### Step 2 — Install DAT
 
 ```sh
 git clone https://github.com/d4nteenc-hub/Tool-DAT-Dante-Assisten-Terminal-.git
@@ -43,23 +113,38 @@ cd Tool-DAT-Dante-Assisten-Terminal-
 sh install.sh
 ```
 
-The installer checks your Python version and `curses` support, then creates a `dat` launcher in `~/.local/bin` (or `$PREFIX/bin` on Termux). On Termux it installs Python for you if it is missing. If the launcher directory isn't on your `PATH`, the script prints the line to add to your shell profile.
+The installer checks your Python version and `curses` support, then creates a `dat` launcher in `~/.local/bin` (or `$PREFIX/bin` on Termux). On Termux it installs Python for you if it is missing.
 
 > **Keep the cloned folder.** The launcher runs DAT from it, so deleting the folder breaks the `dat` command.
 
-To update later: `cd` into the folder and run `git pull`.
+**Linux / macOS only:** if the installer says to add `~/.local/bin` to your `PATH`, run the line for your shell, then restart the terminal:
 
-To uninstall: run `dat --reset` first if you want to delete your saved key, then `sh install.sh --uninstall`.
+```sh
+# bash (most Linux)
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
 
-### Run without installing
+# zsh (macOS default)
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.zshrc
+```
+
+On Termux this step isn't needed.
+
+### Step 3 — Run it
+
+```sh
+dat
+```
+
+Prefer not to install? Run it straight from the cloned folder:
 
 ```sh
 python3 -m dat
 ```
 
-### Windows
+### Update and uninstall
 
-Native Windows has no `curses`. Use WSL, or try `pip install windows-curses`.
+- **Update:** `cd` into the cloned folder and run `git pull`.
+- **Uninstall:** run `dat --reset` first if you want to delete your saved key, then `sh install.sh --uninstall` from the cloned folder.
 
 ## Quick start
 
