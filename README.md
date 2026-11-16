@@ -5,7 +5,15 @@ An AI that operates your terminal for you. Tell DAT what you want in plain langu
 ![Python 3.8+](https://img.shields.io/badge/python-3.8%2B-blue)
 ![Dependencies: none](https://img.shields.io/badge/dependencies-none-brightgreen)
 ![License: MIT](https://img.shields.io/badge/license-MIT-green)
-![Version 0.1.0](https://img.shields.io/badge/version-0.1.0-lightgrey)
+![Version 0.2.1](https://img.shields.io/badge/version-0.2.1-lightgrey)
+
+```
+you > how much storage is left?
+DAT > Checking.
+      $ df -h ~
+      ...
+DAT > 5.8G free of 110G.
+```
 
 ## Features
 
@@ -13,9 +21,10 @@ An AI that operates your terminal for you. Tell DAT what you want in plain langu
 - **Agent loop.** DAT runs up to 5 commands per turn in one persistent shell (`cd` persists), reads the exit codes and output, fixes errors, and continues until the task is finished.
 - **Five providers.** Groq, Gemini, OpenRouter, OpenAI and Anthropic. Paste a key and DAT detects the provider from its prefix and picks a sensible default model.
 - **Two modes.** `/fast` acts immediately. `/think` writes a plan first and waits for your approval before running anything.
+- **Personas.** `/persona` changes how DAT talks (for example `tsundere` or `calm and formal`). The default style stays as it is, and a persona never affects the rules, the safety filter or the reply format.
 - **Safety filter.** Destructive commands ask for confirmation; catastrophic ones are blocked (see [Safety](#safety)).
 - **Multilingual confirmations.** Answer "yes" or "no" in almost any language (`ya`, `gas`, `oui`, `はい`, `nggak`, ...). Ambiguous replies are classified by the model.
-- **Terminal UI.** A blue curses interface with a centered banner, scrollback, input history, `/command` completion and Esc to cancel a running task. Tap the text you typed to fix a typo in place (automatic on desktop terminals; see `/mouse`).
+- **Terminal UI.** A blue curses interface with a centered banner, scrollback, input history, `/command` completion and Esc to cancel a running task. AI replies are shown cleanly: bold is drawn bold and code in its own colour, and headings, lists, quotes, tables and links lose their markdown symbols. Anything DAT doesn't recognise is shown as-is, never dropped. Tap the text you typed to fix a typo in place (automatic on desktop terminals; see `/mouse`).
 - **Self-update.** `/update` checks GitHub for a newer version and installs it after you confirm.
 - **Zero dependencies.** Pure Python standard library.
 - **Termux-friendly.** Detects Termux and tells the model to use `pkg` instead of `sudo`.
@@ -162,6 +171,7 @@ Prefix a line with `!` to run a shell command directly, with no AI involved: `!l
 | `/model` | List available models. `/model <n>` or `/model <name>` switches; `/model list <text>` filters |
 | `/key` | Change the API key or provider |
 | `/mouse` | `/mouse on`, `/mouse off` or `/mouse auto`: tap typed text to move the cursor and use the mouse wheel (see below) |
+| `/persona` | Change how DAT talks. `/persona` asks which persona; `/persona <style>` sets it directly; `/persona default` goes back (see below) |
 | `/update` | Check GitHub for a newer DAT and install it if you say yes |
 | `/clear` | Clear the screen and the AI's memory of the conversation |
 | `/help` | Show the command list |
@@ -188,6 +198,14 @@ Prefix a line with `!` to run a shell command directly, with no AI involved: `!l
 **About `/mouse`.** Tap-to-move works by letting DAT receive your taps and wheel as mouse events. The default, `auto`, turns it **on in desktop terminals (Linux, macOS, WSL)** and **off in Termux**, because on Termux it can stop the on-screen keyboard from opening when you tap the input. Override it any time: `/mouse on` forces it on, `/mouse off` forces it off, `/mouse auto` goes back to the default, and plain `/mouse` flips it. Your choice is saved. With tap support off, move with the arrow keys and Ctrl+A / Ctrl+E as usual. If you'd rather select text with your own mouse in a desktop terminal, run `/mouse off` (or hold Shift while dragging).
 
 The output panel fills from the top. A scrollbar and the "more" hints only appear once the output no longer fits.
+
+### Persona
+
+`/persona` asks which persona you want. Type a style such as `tsundere` or `calm and formal`, press Enter on an empty line to keep the current one, or type `default` to go back. You can also do it in one line: `/persona tsundere`.
+
+- The persona only changes how DAT talks. The reply format, the safety filter and the plain-text rule always stay in force, so switching persona never brings stray markdown back.
+- Changing the persona clears the conversation memory (the screen stays). Otherwise earlier replies keep pulling toward the old style.
+- It is saved in your config and limited to 300 characters.
 
 ### Command-line options
 
@@ -283,6 +301,7 @@ dat/
   shell.py      persistent-cwd shell runner with timeout and cancel
   config.py     config file load / save / reset
   ui.py         curses terminal UI
+  richtext.py   draws the AI's markdown (bold, code, lists, tables...) without the symbols
   updater.py    /update: version check and self-update
   theme.py      colours, text width and wrapping
 install.sh      launcher installer
