@@ -52,7 +52,7 @@ ART = ART_UTF if UTF else ART_ASCII
 MODES = {"fast": ("Fast", "quick replies, acts now"), "think": ("Think", "plans first, then acts")}
 HELP = [("/fast", "quick replies"), ("/think", "plan first"), ("/model", "switch model"),
         ("/key", "API key"), ("/help", "all commands"), ("/exit", "quit"), ("!cmd", "run shell directly")]
-COMMANDS = ["/fast", "/think", "/model", "/key", "/update", "/clear", "/help", "/exit"]
+COMMANDS = ["/fast", "/think", "/model", "/key", "/mouse", "/update", "/clear", "/help", "/exit"]
 
 R, Y, W = curses.COLOR_RED, curses.COLOR_YELLOW, curses.COLOR_WHITE
 B, C = curses.COLOR_BLUE, curses.COLOR_CYAN

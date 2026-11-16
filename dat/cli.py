@@ -6,7 +6,7 @@ import sys
 from typing import List, Optional
 
 from . import __version__, config, providers, shell, updater
-from .agent import Agent, describe_error
+from .agent import Agent, describe_error, is_termux
 from .providers import ORDER, PROVIDERS, ProviderError
 
 MODE_TEXT = {"fast": "Fast - quick replies, acts now", "think": "Think - plans first, then acts"}
@@ -17,6 +17,7 @@ HELP_TEXT = [
     ("plain", "  /think   plans first, then acts"),
     ("plain", "  /model   list models; /model <n|name>"),
     ("plain", "  /key     change API key or provider"),
+    ("plain", "  /mouse   tap to move the cursor (on/off/auto)"),
     ("plain", "  /update  check for a newer DAT"),
     ("plain", "  /clear   clear screen and AI memory"),
     ("plain", "  /help    this list"),
@@ -31,6 +32,12 @@ HELP_TEXT = [
     ("plain", "  Esc          cancel the running task"),
     ("dim", "Destructive commands ask first. Answer yes or no in any language."),
 ]
+
+
+def mouse_on(cfg: dict) -> bool:
+    """Tap support is on for desktop terminals and off in Termux, unless the user chose."""
+    m = cfg.get("mouse", "auto")
+    return m == "on" or (m == "auto" and not is_termux())
 
 
 def short_path(p: str) -> str:
@@ -131,6 +138,7 @@ class App:
     def start(self) -> None:
         ui, cfg = self.ui, self.cfg
         ui.set_mode(cfg["mode"])
+        ui.set_mouse(mouse_on(cfg))
         if not config.is_ready(cfg) and setup(ui, cfg, True) is None:
             return
         self.agent = Agent(cfg, ui)
@@ -186,9 +194,29 @@ class App:
             self.model(arg)
         elif cmd == "/update":
             self.update()
+        elif cmd == "/mouse":
+            self.mouse(arg)
         else:
             ui.say("warn", "Unknown command %s. Try /help." % cmd)
         return None
+
+    def mouse(self, arg: str) -> None:
+        ui, cfg = self.ui, self.cfg
+        a = arg.strip().lower()
+        if a not in ("", "on", "off", "auto"):
+            ui.say("warn", "Use /mouse on, /mouse off or /mouse auto.")
+            return
+        cfg["mouse"] = a or ("off" if mouse_on(cfg) else "on")
+        ui.set_mouse(mouse_on(cfg))
+        self.save()
+        if cfg["mouse"] == "auto":
+            ui.say("say", "Tap-to-move is automatic: on in desktop terminals, off in Termux. Right now it is %s."
+                   % ("on" if mouse_on(cfg) else "off"))
+        elif cfg["mouse"] == "on":
+            ui.say("say", "Tap-to-move is on: tap typed text to put the cursor there.")
+            ui.say("dim", "If the keyboard stops showing when you tap the input, run /mouse off.")
+        else:
+            ui.say("say", "Tap-to-move is off. Move with the arrow keys; the keyboard shows normally.")
 
     def update(self) -> None:
         ui = self.ui

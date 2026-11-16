@@ -4,7 +4,7 @@ import json
 import os
 from pathlib import Path
 
-DEFAULTS = {"provider": "", "api_key": "", "model": "", "mode": "fast"}
+DEFAULTS = {"provider": "", "api_key": "", "model": "", "mode": "fast", "mouse": "auto"}
 
 
 def config_path() -> Path:
@@ -26,6 +26,8 @@ def load() -> dict:
     cfg.update({k: v for k, v in data.items() if k in DEFAULTS and isinstance(v, str)})
     if cfg["mode"] not in ("fast", "think"):
         cfg["mode"] = "fast"
+    if cfg["mouse"] not in ("auto", "on", "off"):
+        cfg["mouse"] = "auto"
     return cfg
 
 

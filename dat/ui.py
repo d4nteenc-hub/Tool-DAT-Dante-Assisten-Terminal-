@@ -45,6 +45,8 @@ class TUI:
         self.cursor_pos = None
         self.cursor_state = None
         self.fake_cursor = False
+        self.mouse = False
+        self.mouse_applied = False
         self.input_row = -1
         self.input_tw = 0
 
@@ -135,12 +137,22 @@ class TUI:
             self.fake_cursor = True
         except curses.error:
             self.fake_cursor = False
-        if not os.environ.get("DAT_NO_MOUSE"):
-            try:
+
+    def set_mouse(self, on: bool) -> None:
+        # Mouse reporting makes Termux send taps to DAT instead of opening the keyboard,
+        # so the app only turns it on by default outside Termux (see cli.mouse_on).
+        self.mouse, self.dirty = bool(on), True
+
+    def _apply_mouse(self) -> None:
+        self.mouse_applied = self.mouse
+        try:
+            if self.mouse:
                 curses.mouseinterval(0)
                 curses.mousemask(curses.ALL_MOUSE_EVENTS)
-            except (curses.error, AttributeError):
-                pass
+            else:
+                curses.mousemask(0)
+        except (curses.error, AttributeError):
+            pass
 
     def _init_colors(self) -> None:
         wide = False
@@ -344,6 +356,8 @@ class TUI:
             self.dirty = True
 
     def _tick(self) -> None:
+        if self.mouse != self.mouse_applied:
+            self._apply_mouse()
         now = time.time()
         moved = now - self.last_anim >= 0.09
         if moved:
