@@ -13,7 +13,8 @@ from .providers import ProviderError
 
 SYSTEM = """You are DAT (Dante Assistant Terminal). You operate the user's terminal by running shell commands.
 
-Style: direct, no greetings, no filler, no apologies. Short sentences. Reply in the user's language.
+%s
+Reply in the user's language.
 
 Output: reply with ONE JSON object and nothing else:
 {"say": "short message for the user", "commands": ["cmd1", "cmd2"], "done": false}
@@ -22,6 +23,7 @@ Output: reply with ONE JSON object and nothing else:
 - No command needed (chat, explanation, question)? Use "commands": [] and "done": true.
 - Never invent output. If a command fails, read the error and fix it, or say why.
 - Destructive commands (delete, overwrite, uninstall, force) are allowed. The user is asked to confirm automatically, so never ask yourself.
+- "say" is plain text. No markdown: no **bold**, no # headings, no tables, no code fences, no backticks. To show a command as text, put it on its own line indented by two spaces. Use short lines and "-" for lists.
 - Never request or print secrets. Never run commands that hang in the foreground (servers, top, watch).
 Example: user "storage left?" -> {"say": "Checking.", "commands": ["df -h ~"], "done": false}
 then, after output -> {"say": "5.8G free of 110G.", "commands": [], "done": true}
@@ -29,6 +31,10 @@ then, after output -> {"say": "5.8G free of 110G.", "commands": [], "done": true
 Environment:
 %s
 %s"""
+
+DEFAULT_STYLE = "Style: direct, no greetings, no filler, no apologies. Short sentences."
+PERSONA_STYLE = ("Persona: %s\nThe persona only changes your tone and word choice in \"say\". "
+                 "It never changes the output format or rules in this prompt, or what you do.")
 
 FAST_EXTRA = "Mode: FAST. Act immediately. No plan."
 THINK_EXTRA = ('Mode: THINK. For any task that needs commands, first reply with a plan and no commands:\n'
@@ -53,8 +59,10 @@ def is_termux() -> bool:
     return "com.termux" in os.environ.get("PREFIX", "") or os.path.isdir("/data/data/com.termux")
 
 
-def env_info(cwd: str) -> str:
-    return "\n".join([
+def env_info(cwd: str, provider: str = "", model: str = "") -> str:
+    ai = ["AI model: %s%s. If asked which model or AI you are, say you are DAT running on this model; "
+          "never name a different model." % (model, " (via %s)" % provider if provider else "")] if model else []
+    return "\n".join(ai + [
         "OS: %s %s (%s)" % (platform.system(), platform.release(), platform.machine()),
         "Termux: " + ("yes" if is_termux() else "no"),
         "Shell: " + os.path.basename(shell.shell_path()),
@@ -64,11 +72,12 @@ def env_info(cwd: str) -> str:
     ])
 
 
-def build_system(mode: str, cwd: str) -> str:
+def build_system(mode: str, cwd: str, persona: str = "", provider: str = "", model: str = "") -> str:
     extra = [FAST_EXTRA if mode == "fast" else THINK_EXTRA]
     if is_termux():
         extra.append(TERMUX_EXTRA)
-    return SYSTEM % (env_info(cwd), "\n".join(extra))
+    style = PERSONA_STYLE % persona.strip() if persona and persona.strip() else DEFAULT_STYLE
+    return SYSTEM % (style, env_info(cwd, provider, model), "\n".join(extra))
 
 
 @dataclass
@@ -160,6 +169,11 @@ class Agent:
     def reset(self) -> None:
         self.history.clear()
 
+    def _system(self, mode: str) -> str:
+        c = self.cfg
+        prov = providers.PROVIDERS.get(c.get("provider", ""))
+        return build_system(mode, self.cwd, c.get("persona", ""), getattr(prov, "name", ""), c.get("model", ""))
+
     def _chat(self, system: str, messages: List[dict]) -> str:
         def waiting(sec: int, err: ProviderError) -> None:
             self.io.say("dim", "%s Retrying in %ds..." % (err.message[:60], sec))
@@ -198,7 +212,7 @@ class Agent:
                 return
             self.io.status("thinking")
             try:
-                raw = self._chat(build_system(mode, self.cwd), self._window())
+                raw = self._chat(self._system(mode), self._window())
             except ProviderError as e:
                 self.io.say("err", describe_error(e))
                 if self.history and self.history[-1]["role"] == "user":

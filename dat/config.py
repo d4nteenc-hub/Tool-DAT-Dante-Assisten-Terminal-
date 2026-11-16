@@ -4,7 +4,8 @@ import json
 import os
 from pathlib import Path
 
-DEFAULTS = {"provider": "", "api_key": "", "model": "", "mode": "fast", "mouse": "auto"}
+PERSONA_MAX = 300
+DEFAULTS = {"provider": "", "api_key": "", "model": "", "mode": "fast", "mouse": "auto", "persona": ""}
 
 
 def config_path() -> Path:
@@ -28,6 +29,7 @@ def load() -> dict:
         cfg["mode"] = "fast"
     if cfg["mouse"] not in ("auto", "on", "off"):
         cfg["mouse"] = "auto"
+    cfg["persona"] = cfg["persona"].strip()[:PERSONA_MAX]
     return cfg
 
 

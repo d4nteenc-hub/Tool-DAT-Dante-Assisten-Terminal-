@@ -9,6 +9,9 @@ from . import __version__, config, providers, shell, updater
 from .agent import Agent, describe_error, is_termux
 from .providers import ORDER, PROVIDERS, ProviderError
 
+PERSONA_RESET = {"default", "reset", "balik", "bawaan", "normal", "biasa"}
+PERSONA_KEEP = {"", "-", "keep", "same", "tetap", "sama", "cancel", "batal"}
+
 MODE_TEXT = {"fast": "Fast - quick replies, acts now", "think": "Think - plans first, then acts"}
 
 HELP_TEXT = [
@@ -18,6 +21,7 @@ HELP_TEXT = [
     ("plain", "  /model   list models; /model <n|name>"),
     ("plain", "  /key     change API key or provider"),
     ("plain", "  /mouse   tap to move the cursor (on/off/auto)"),
+    ("plain", "  /persona change how DAT talks"),
     ("plain", "  /update  check for a newer DAT"),
     ("plain", "  /clear   clear screen and AI memory"),
     ("plain", "  /help    this list"),
@@ -196,6 +200,9 @@ class App:
             self.update()
         elif cmd == "/mouse":
             self.mouse(arg)
+        elif cmd == "/persona":
+            if self.persona(arg) is False:
+                return False
         else:
             ui.say("warn", "Unknown command %s. Try /help." % cmd)
         return None
@@ -217,6 +224,34 @@ class App:
             ui.say("dim", "If the keyboard stops showing when you tap the input, run /mouse off.")
         else:
             ui.say("say", "Tap-to-move is off. Move with the arrow keys; the keyboard shows normally.")
+
+    def persona(self, arg: str) -> Optional[bool]:
+        ui, cfg = self.ui, self.cfg
+        cur = cfg.get("persona", "")
+        if not arg:
+            ui.say("title", "Persona")
+            ui.say("plain", "Now: " + (cur or "default"))
+            ui.say("dim", "Type a persona, for example: tsundere, or calm and formal.\n"
+                          "Empty = keep the current one. default = back to the default.")
+            arg = ui.ask("persona")
+            if arg is None:
+                return False
+        text = arg.strip()
+        if text.lower() in PERSONA_KEEP:
+            ui.say("dim", "Okay, persona unchanged.")
+            return None
+        new = "" if text.lower() in PERSONA_RESET else text[:config.PERSONA_MAX]
+        if new == cur:
+            ui.say("dim", "Already using %s." % ("that persona" if new else "the default persona"))
+            return None
+        cfg["persona"] = new
+        self.save()
+        self.agent.reset()
+        ui.say("say", ("Persona set: " + new) if new else "Back to the default persona.")
+        if len(text) > len(new) and new:
+            ui.say("dim", "Shortened to %d characters." % config.PERSONA_MAX)
+        ui.say("dim", "Conversation memory cleared so the old style doesn't carry over.")
+        return None
 
     def update(self) -> None:
         ui = self.ui

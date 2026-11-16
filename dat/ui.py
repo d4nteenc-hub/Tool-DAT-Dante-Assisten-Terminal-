@@ -9,6 +9,7 @@ import traceback
 from typing import Callable, Dict, List, Optional
 
 from . import __version__
+from . import richtext
 from .theme import (ART, COMMANDS, G, HELP, MODES, PALETTE, UTF, Entry, clean, cw, kinds, width)
 
 MAX_LOG = 3000
@@ -53,10 +54,18 @@ class TUI:
     def say(self, kind: str, text: str) -> None:
         first, cont, pstyle, tstyle = kinds().get(kind, kinds()["plain"])
         lines = clean(str(text)).split("\n")
+        rows = None
+        if kind == "say":
+            try:  # a formatting problem must never cost the user the message
+                rows = richtext.render(lines, tstyle) or None
+            except Exception:
+                rows = None
+        if rows is None:
+            rows = [[(line, tstyle)] for line in lines]
         with self.lock:
-            for i, line in enumerate(lines):
+            for i, segs in enumerate(rows):
                 prefix = first if i == 0 else cont
-                self.log.append(Entry([(prefix, pstyle), (line, tstyle)], width(prefix)))
+                self.log.append(Entry([(prefix, pstyle)] + segs, width(prefix)))
             if len(self.log) > MAX_LOG:
                 del self.log[:MAX_LOG // 5]
             self.dirty = True

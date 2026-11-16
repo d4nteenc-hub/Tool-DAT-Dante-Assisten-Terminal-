@@ -52,7 +52,7 @@ ART = ART_UTF if UTF else ART_ASCII
 MODES = {"fast": ("Fast", "quick replies, acts now"), "think": ("Think", "plans first, then acts")}
 HELP = [("/fast", "quick replies"), ("/think", "plan first"), ("/model", "switch model"),
         ("/key", "API key"), ("/help", "all commands"), ("/exit", "quit"), ("!cmd", "run shell directly")]
-COMMANDS = ["/fast", "/think", "/model", "/key", "/mouse", "/update", "/clear", "/help", "/exit"]
+COMMANDS = ["/fast", "/think", "/model", "/key", "/mouse", "/persona", "/update", "/clear", "/help", "/exit"]
 
 R, Y, W = curses.COLOR_RED, curses.COLOR_YELLOW, curses.COLOR_WHITE
 B, C = curses.COLOR_BLUE, curses.COLOR_CYAN
@@ -65,6 +65,7 @@ PALETTE = {
     "ln0": (17, B, 0, 1), "ln1": (25, B, 1, 0), "ln2": (32, C, 0, 0), "ln3": (39, C, 0, 0),
     "head": (51, C, 1, 0), "gem": (45, C, 1, 0), "flash": (159, C, 1, 0), "mode": (45, C, 1, 0),
     "thumb": (33, B, 1, 0), "track": (17, B, 0, 1), "cursor": (117, C, 1, 0),
+    "bold": (159, C, 1, 0), "code": (153, W, 0, 0),
 }
 
 Seg = Tuple[str, str]
