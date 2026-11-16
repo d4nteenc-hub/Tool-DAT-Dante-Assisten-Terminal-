@@ -5,7 +5,7 @@ import os
 import sys
 from typing import List, Optional
 
-from . import __version__, config, providers, shell
+from . import __version__, config, providers, shell, updater
 from .agent import Agent, describe_error
 from .providers import ORDER, PROVIDERS, ProviderError
 
@@ -17,6 +17,7 @@ HELP_TEXT = [
     ("plain", "  /think   plans first, then acts"),
     ("plain", "  /model   list models; /model <n|name>"),
     ("plain", "  /key     change API key or provider"),
+    ("plain", "  /update  check for a newer DAT"),
     ("plain", "  /clear   clear screen and AI memory"),
     ("plain", "  /help    this list"),
     ("plain", "  /exit    quit (Ctrl+D works too)"),
@@ -183,9 +184,38 @@ class App:
             self.header()
         elif cmd == "/model":
             self.model(arg)
+        elif cmd == "/update":
+            self.update()
         else:
             ui.say("warn", "Unknown command %s. Try /help." % cmd)
         return None
+
+    def update(self) -> None:
+        ui = self.ui
+        ui.status("checking for updates")
+        try:
+            latest = updater.fetch_latest()
+        except updater.UpdateError as e:
+            ui.say("err", str(e))
+            return
+        if updater.parse_version(latest) == updater.parse_version(__version__):
+            ui.say("say", "You're up to date (v%s)." % __version__)
+            return
+        if updater.is_newer(latest, __version__):
+            question = "DAT v%s is available (you have v%s). Update now?" % (latest, __version__)
+        else:
+            question = ("GitHub has v%s, which is older than your v%s. Switch to v%s anyway?"
+                        % (latest, __version__, latest))
+        if not self.agent.confirm(question):
+            ui.say("dim", "Okay, not changing anything.")
+            return
+        ui.status("downloading")
+        try:
+            method, new = updater.update()
+        except updater.UpdateError as e:
+            ui.say("err", str(e))
+            return
+        ui.say("say", "Now on v%s (%s). Restart DAT to use it: /exit, then run dat again." % (new, method))
 
     def model(self, arg: str) -> None:
         ui, cfg = self.ui, self.cfg
