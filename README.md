@@ -5,7 +5,15 @@ An AI that operates your terminal for you. Tell DAT what you want in plain langu
 ![Python 3.8+](https://img.shields.io/badge/python-3.8%2B-blue)
 ![Dependencies: none](https://img.shields.io/badge/dependencies-none-brightgreen)
 ![License: MIT](https://img.shields.io/badge/license-MIT-green)
-![Version 1.1.0](https://img.shields.io/badge/version-1.1.0-lightgrey)
+![Version 0.1.0](https://img.shields.io/badge/version-0.1.0-lightgrey)
+
+```
+you > how much storage is left?
+DAT > Checking.
+      $ df -h ~
+      ...
+DAT > 5.8G free of 110G.
+```
 
 ## Features
 
@@ -15,7 +23,7 @@ An AI that operates your terminal for you. Tell DAT what you want in plain langu
 - **Two modes.** `/fast` acts immediately. `/think` writes a plan first and waits for your approval before running anything.
 - **Safety filter.** Destructive commands ask for confirmation; catastrophic ones are blocked (see [Safety](#safety)).
 - **Multilingual confirmations.** Answer "yes" or "no" in almost any language (`ya`, `gas`, `oui`, `はい`, `nggak`, ...). Ambiguous replies are classified by the model.
-- **Terminal UI.** A blue curses interface with a centered banner, scrollback, input history, `/command` completion and Esc to cancel a running task. Tap the text you typed to fix a typo in place, no retyping.
+- **Terminal UI.** A blue curses interface with a centered banner, scrollback, input history, `/command` completion and Esc to cancel a running task. Tap the text you typed to fix a typo in place (automatic on desktop terminals; see `/mouse`).
 - **Self-update.** `/update` checks GitHub for a newer version and installs it after you confirm.
 - **Zero dependencies.** Pure Python standard library.
 - **Termux-friendly.** Detects Termux and tells the model to use `pkg` instead of `sudo`.
@@ -161,6 +169,7 @@ Prefix a line with `!` to run a shell command directly, with no AI involved: `!l
 | `/think` | Plans first, then acts after you approve |
 | `/model` | List available models. `/model <n>` or `/model <name>` switches; `/model list <text>` filters |
 | `/key` | Change the API key or provider |
+| `/mouse` | `/mouse on`, `/mouse off` or `/mouse auto`: tap typed text to move the cursor and use the mouse wheel (see below) |
 | `/update` | Check GitHub for a newer DAT and install it if you say yes |
 | `/clear` | Clear the screen and the AI's memory of the conversation |
 | `/help` | Show the command list |
@@ -172,15 +181,19 @@ Prefix a line with `!` to run a shell command directly, with no AI involved: `!l
 | Key | Action |
 | --- | --- |
 | Left / Right | Move the cursor in the input |
-| Tap on the input text | Put the cursor right after the tapped letter, so Backspace removes it and you can type the fix |
-| Tap `‹` / `›` | Scroll a long input left / right |
-| Mouse wheel / swipe | Scroll the output |
+| Ctrl+A / Ctrl+E | Jump to the start / end of the input |
+| Ctrl+W | Delete the last word |
+| Tap on the input text | When tap support is on: puts the cursor right after the tapped letter, so Backspace removes it and you can type the fix |
+| Tap `‹` / `›` | When tap support is on: scroll a long input left / right |
+| Mouse wheel | When tap support is on: scroll the output |
 | Up / Down | Scroll the output |
 | PgUp / PgDn | Scroll a page |
 | Home / End | Jump to top / bottom |
 | Tab | Complete a `/command` |
 | Ctrl+P / Ctrl+N | Input history |
 | Esc | Cancel the running task |
+
+**About `/mouse`.** Tap-to-move works by letting DAT receive your taps and wheel as mouse events. The default, `auto`, turns it **on in desktop terminals (Linux, macOS, WSL)** and **off in Termux**, because on Termux it can stop the on-screen keyboard from opening when you tap the input. Override it any time: `/mouse on` forces it on, `/mouse off` forces it off, `/mouse auto` goes back to the default, and plain `/mouse` flips it. Your choice is saved. With tap support off, move with the arrow keys and Ctrl+A / Ctrl+E as usual. If you'd rather select text with your own mouse in a desktop terminal, run `/mouse off` (or hold Shift while dragging).
 
 The output panel fills from the top. A scrollbar and the "more" hints only appear once the output no longer fits.
 
@@ -262,7 +275,6 @@ Run `dat --config` to print the exact path. The key stays on your device and is 
 | `DAT_BASE_URL` | Override the API base URL for OpenAI-compatible providers (Groq, Gemini, OpenRouter, OpenAI), e.g. for a proxy or local server |
 | `DAT_CMD_TIMEOUT` | Per-command timeout in seconds (default `300`) |
 | `DAT_NO_ANIM` | Set to any value to turn off UI animation |
-| `DAT_NO_MOUSE` | Set to any value to turn off tap and wheel support (e.g. if it gets in the way of selecting text) |
 
 ## How it works
 
