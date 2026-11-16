@@ -7,14 +7,6 @@ An AI that operates your terminal for you. Tell DAT what you want in plain langu
 ![License: MIT](https://img.shields.io/badge/license-MIT-green)
 ![Version 1.1.0](https://img.shields.io/badge/version-1.1.0-lightgrey)
 
-```
-you > how much storage is left?
-DAT > Checking.
-      $ df -h ~
-      ...
-DAT > 5.8G free of 110G.
-```
-
 ## Features
 
 - **Natural-language terminal control.** Describe the task in your own language; DAT replies in that language.
