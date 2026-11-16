@@ -5,7 +5,15 @@ An AI that operates your terminal for you. Tell DAT what you want in plain langu
 ![Python 3.8+](https://img.shields.io/badge/python-3.8%2B-blue)
 ![Dependencies: none](https://img.shields.io/badge/dependencies-none-brightgreen)
 ![License: MIT](https://img.shields.io/badge/license-MIT-green)
-![Version 1.0.1](https://img.shields.io/badge/version-1.0.1-lightgrey)
+![Version 1.1.0](https://img.shields.io/badge/version-1.1.0-lightgrey)
+
+```
+you > how much storage is left?
+DAT > Checking.
+      $ df -h ~
+      ...
+DAT > 5.8G free of 110G.
+```
 
 ## Features
 
@@ -16,6 +24,7 @@ An AI that operates your terminal for you. Tell DAT what you want in plain langu
 - **Safety filter.** Destructive commands ask for confirmation; catastrophic ones are blocked (see [Safety](#safety)).
 - **Multilingual confirmations.** Answer "yes" or "no" in almost any language (`ya`, `gas`, `oui`, `はい`, `nggak`, ...). Ambiguous replies are classified by the model.
 - **Terminal UI.** A blue curses interface with a centered banner, scrollback, input history, `/command` completion and Esc to cancel a running task. Tap the text you typed to fix a typo in place, no retyping.
+- **Self-update.** `/update` checks GitHub for a newer version and installs it after you confirm.
 - **Zero dependencies.** Pure Python standard library.
 - **Termux-friendly.** Detects Termux and tells the model to use `pkg` instead of `sudo`.
 
@@ -135,7 +144,7 @@ python3 -m dat
 
 ### Update and uninstall
 
-- **Update:** `cd` into the cloned folder and run `git pull`.
+- **Update:** type `/update` inside DAT. See [Updating](#updating).
 - **Uninstall:** run `dat --reset` first if you want to delete your saved key, then `sh install.sh --uninstall` from the cloned folder.
 
 ## Quick start
@@ -160,6 +169,7 @@ Prefix a line with `!` to run a shell command directly, with no AI involved: `!l
 | `/think` | Plans first, then acts after you approve |
 | `/model` | List available models. `/model <n>` or `/model <name>` switches; `/model list <text>` filters |
 | `/key` | Change the API key or provider |
+| `/update` | Check GitHub for a newer DAT and install it if you say yes |
 | `/clear` | Clear the screen and the AI's memory of the conversation |
 | `/help` | Show the command list |
 | `/exit` | Quit (`/quit`, `/q` and Ctrl+D also work) |
@@ -189,6 +199,21 @@ dat --version    print the version
 dat --config     print the config file path and exit
 dat --reset      delete the saved API key and settings
 ```
+
+## Updating
+
+Type `/update` in DAT. It checks the version number published on GitHub and compares it with yours:
+
+- **Higher on GitHub:** DAT asks "Update now?".
+- **Lower on GitHub:** DAT asks "Switch to v... anyway?", so you can also go back to an older version on purpose.
+- **Same:** DAT says you're up to date.
+
+You answer yes or no in any language, and nothing changes unless you say yes.
+
+- **Installed from a git clone:** DAT runs `git pull --ff-only` in the folder. If you edited files there, commit or stash them first.
+- **Installed any other way:** DAT downloads the latest code from GitHub and replaces the `.py` files of the `dat` package. A copy of the old files is kept next to your config file, in `backup-v<old version>` (`dat --config` shows where that is).
+
+DAT only looks at the number, so whenever you push changes to GitHub, change `__version__` in `dat/__init__.py` too (any different number works, up or down). Your API key and settings are never touched. Restart DAT afterwards: `/exit`, then `dat`. If `install.sh` ever changes, run it again.
 
 ## Providers
 
@@ -262,18 +287,10 @@ dat/
   shell.py      persistent-cwd shell runner with timeout and cancel
   config.py     config file load / save / reset
   ui.py         curses terminal UI
+  updater.py    /update: version check and self-update
   theme.py      colours, text width and wrapping
-tests/          unit tests
 install.sh      launcher installer
 pyproject.toml  package metadata
-```
-
-## Development
-
-Run the tests (standard library only):
-
-```sh
-python3 -m unittest discover
 ```
 
 ## License
